@@ -8,14 +8,12 @@ from constants import INT_SIZE
 
 class Server:
     def __init__(self):
-        self.ip = socket.gethostbyname(socket.gethostname())
-        while 1:
+        self.ip = '0.0.0.0'
+        while True:
             try:
                 self.port = int(input('Enter port number to run on --> '))
-
-                self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.s.bind((self.ip, self.port))
-
+                self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.server.bind((self.ip, self.port))
                 break
             except Exception as e:
                 print("Couldn't bind to that port, exception:", e)
@@ -24,39 +22,41 @@ class Server:
         self.accept_connections()
 
     def accept_connections(self):
-        self.s.listen(100)
+        self.server.listen(100)
 
-        print('Running on IP: ' + self.ip)
-        print('Running on port: ' + str(self.port))
+        print('Running on IP:', self.ip)
+        print('Running on port:', str(self.port))
 
         while True:
-            c, addr = self.s.accept()
+            client, _ = self.server.accept()
+            self.connections.append(client)
 
-            self.connections.append(c)
-
-            length = int.from_bytes(c.recv(INT_SIZE), 'big', signed=False)
+            echo_enabled = bool(int.from_bytes(client.recv(INT_SIZE), 'big', signed=False))
+            length = int.from_bytes(client.recv(INT_SIZE), 'big', signed=False)
             print(f'length={length}')
-            username = c.recv(length).decode()
+            username = client.recv(length).decode()
             print(f'{username} connected')
 
-            threading.Thread(target=self.handle_client, args=(c, addr,)).start()
+            threading.Thread(target=self.handle_client, args=(client, username, echo_enabled)).start()
 
-    def broadcast(self, sock, data):
+    def broadcast(self, sock, data, echo_mode):
         for client in self.connections:
-            if client != self.s:  # and client != sock:
+            if client != self.server and (client != sock or echo_mode):
                 try:
                     client.send(data)
-                except:
-                    pass
+                except Exception as e:
+                    print(f'Cannot send data to {client.target_ip}, exception:', e)
 
-    def handle_client(self, c, addr):
-        while 1:
+    def handle_client(self, client, username, echo_mode):
+        while True:
             try:
-                data = c.recv(1024)
-                self.broadcast(c, data)
+                data = client.recv(1024)
+                self.broadcast(client, data, echo_mode)
 
             except socket.error:
-                c.close()
+                client.close()
+                print(f'{username} disconnected')
+                self.connections.remove(client)
 
 
 server = Server()

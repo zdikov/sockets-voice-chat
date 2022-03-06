@@ -1,1 +1,5 @@
+evdev==1.4.0
 PyAudio==0.2.11
+pynput==1.7.6
+python-xlib==0.31
+six==1.16.0
