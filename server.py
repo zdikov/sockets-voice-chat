@@ -63,6 +63,7 @@ class Server:
                 elif code == constants.CODE_DISCONNECT:
                     client.send(constants.CODE_DISCONNECT.to_bytes(constants.INT_SIZE, 'big', signed=False))
                 elif code in (constants.CODE_MUTE, constants.CODE_UNMUTE):
+                    print(username, code)
                     for c in self.connections:
                         if c != client:
                             c.send(code.to_bytes(constants.INT_SIZE, 'big', signed=False))

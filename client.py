@@ -7,17 +7,6 @@ import json
 import constants
 
 
-def print_status(code):
-    if code == constants.CODE_MUTE:
-        return 'muted'
-    elif code == constants.CODE_UNMUTE:
-        return 'unmuted'
-    elif code == constants.CODE_CONNECT:
-        return 'connected'
-    elif code == constants.CODE_DISCONNECT:
-        return 'disconnected'
-
-
 class Client:
     def __init__(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -111,7 +100,7 @@ class Client:
                         constants.CODE_UNMUTE):
                     length = int.from_bytes(self.s.recv(constants.INT_SIZE), 'big', signed=False)
                     username = self.s.recv(length).decode()
-                    print(username, print_status(code))
+                    print(username, constants.print_status(code))
 
             except Exception as e:
                 print(e)
