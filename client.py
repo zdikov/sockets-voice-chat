@@ -3,7 +3,7 @@ import threading
 import pyaudio
 from pynput import keyboard
 
-from constants import INT_SIZE
+import constants
 
 
 class Client:
@@ -29,15 +29,14 @@ class Client:
 
         self.s.connect((self.target_ip, self.target_port))
         if enable_echo:
-            self.s.send(int(1).to_bytes(INT_SIZE, 'big', signed=False))
+            self.s.send(int(1).to_bytes(constants.INT_SIZE, 'big', signed=False))
         else:
-            self.s.send(int(0).to_bytes(INT_SIZE, 'big', signed=False))
+            self.s.send(int(0).to_bytes(constants.INT_SIZE, 'big', signed=False))
 
         username_bytes = self.username.encode()
-        self.s.send(len(username_bytes).to_bytes(INT_SIZE, 'big', signed=False))
+        self.s.send(len(username_bytes).to_bytes(constants.INT_SIZE, 'big', signed=False))
         self.s.send(username_bytes)
 
-        chunk_size = 1024
         audio_format = pyaudio.paInt16
         channels = 1
         rate = 20000
@@ -45,9 +44,9 @@ class Client:
         # initialise microphone recording
         self.p = pyaudio.PyAudio()
         self.playing_stream = self.p.open(format=audio_format, channels=channels, rate=rate, output=True,
-                                          frames_per_buffer=chunk_size)
+                                          frames_per_buffer=constants.CHUNK_SIZE)
         self.recording_stream = self.p.open(format=audio_format, channels=channels, rate=rate, input=True,
-                                            frames_per_buffer=chunk_size)
+                                            frames_per_buffer=constants.CHUNK_SIZE)
 
         print("Connected to Server")
         print("Press 'h' to unmute, press 'q' to quite")
@@ -81,19 +80,28 @@ class Client:
     def receive_server_data(self):
         while self.serve:
             try:
-                data = self.s.recv(1024)
-                self.playing_stream.write(data)
+                code = int.from_bytes(self.s.recv(constants.INT_SIZE), 'big', signed=False)
+                if code == constants.CODE_DATA:
+                    data = self.s.recv(constants.CHUNK_SIZE)
+                    self.playing_stream.write(data)
+                elif code == constants.CODE_DISCONNECT:
+                    break
+
             except Exception as e:
                 print(e)
 
     def send_data_to_server(self):
         while self.serve:
-            if self.send:
-                try:
-                    data = self.recording_stream.read(1024)
+            try:
+                data = self.recording_stream.read(constants.CHUNK_SIZE)
+                if self.send:
+                    self.s.send(constants.CODE_DATA.to_bytes(constants.INT_SIZE, 'big', signed=False))
                     self.s.sendall(data)
-                except Exception as e:
-                    print(e)
+            except Exception as e:
+                print(e)
+        self.s.send(constants.CODE_DISCONNECT.to_bytes(constants.INT_SIZE, 'big', signed=False))
+
+
 
 
 client = Client()

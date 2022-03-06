@@ -1,7 +1,7 @@
 import socket
 import threading
 
-from constants import INT_SIZE
+import constants
 
 
 class Server:
@@ -29,9 +29,8 @@ class Server:
             client, _ = self.server.accept()
             self.connections.append(client)
 
-            echo_enabled = bool(int.from_bytes(client.recv(INT_SIZE), 'big', signed=False))
-            length = int.from_bytes(client.recv(INT_SIZE), 'big', signed=False)
-            print(f'length={length}')
+            echo_enabled = bool(int.from_bytes(client.recv(constants.INT_SIZE), 'big', signed=False))
+            length = int.from_bytes(client.recv(constants.INT_SIZE), 'big', signed=False)
             username = client.recv(length).decode()
             print(f'{username} connected')
 
@@ -40,13 +39,18 @@ class Server:
     def broadcast(self, sock, data, echo_mode):
         for client in self.connections:
             if client != self.server and (client != sock or echo_mode):
+                client.send(constants.CODE_DATA.to_bytes(constants.INT_SIZE, 'big', signed=False))
                 client.send(data)
 
     def handle_client(self, client, username, echo_mode):
         while True:
             try:
-                data = client.recv(1024)
-                self.broadcast(client, data, echo_mode)
+                code = int.from_bytes(client.recv(constants.INT_SIZE), 'big', signed=False)
+                if code == constants.CODE_DATA:
+                    data = client.recv(constants.CHUNK_SIZE)
+                    self.broadcast(client, data, echo_mode)
+                elif code == constants.CODE_DISCONNECT:
+                    client.send(constants.CODE_DISCONNECT.to_bytes(constants.INT_SIZE, 'big', signed=False))
 
             except socket.error:
                 client.close()
