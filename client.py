@@ -2,8 +2,20 @@ import socket
 import threading
 import pyaudio
 from pynput import keyboard
+import json
 
 import constants
+
+
+def print_status(code):
+    if code == constants.CODE_MUTE:
+        return 'muted'
+    elif code == constants.CODE_UNMUTE:
+        return 'unmuted'
+    elif code == constants.CODE_CONNECT:
+        return 'connected'
+    elif code == constants.CODE_DISCONNECT:
+        return 'disconnected'
 
 
 class Client:
@@ -36,6 +48,8 @@ class Client:
         username_bytes = self.username.encode()
         self.s.send(len(username_bytes).to_bytes(constants.INT_SIZE, 'big', signed=False))
         self.s.send(username_bytes)
+        length = int.from_bytes(self.s.recv(constants.INT_SIZE), 'big', signed=False)
+        participants = json.loads(self.s.recv(length).decode())
 
         audio_format = pyaudio.paInt16
         channels = 1
@@ -49,6 +63,10 @@ class Client:
                                             frames_per_buffer=constants.CHUNK_SIZE)
 
         print("Connected to Server")
+        if len(participants) > 0:
+            print('Participants:')
+            for name in participants:
+                print(name)
         print("Press 'h' to unmute, press 'q' to quite")
 
         # start threads
@@ -73,9 +91,11 @@ class Client:
             if self.send:
                 print("Press 'h' to unmute")
                 self.send = False
+                self.s.send(constants.CODE_MUTE.to_bytes(constants.INT_SIZE, 'big', signed=False))
             else:
                 print("Press 'h' to mute")
                 self.send = True
+                self.s.send(constants.CODE_UNMUTE.to_bytes(constants.INT_SIZE, 'big', signed=False))
 
     def receive_server_data(self):
         while self.serve:
@@ -86,6 +106,12 @@ class Client:
                     self.playing_stream.write(data)
                 elif code == constants.CODE_DISCONNECT:
                     break
+                elif code in (
+                        constants.CODE_CONNECT, constants.CODE_DISCONNECT_OTHER, constants.CODE_MUTE,
+                        constants.CODE_UNMUTE):
+                    length = int.from_bytes(self.s.recv(constants.INT_SIZE), 'big', signed=False)
+                    username = self.s.recv(length).decode()
+                    print(username, print_status(code))
 
             except Exception as e:
                 print(e)
@@ -100,8 +126,6 @@ class Client:
             except Exception as e:
                 print(e)
         self.s.send(constants.CODE_DISCONNECT.to_bytes(constants.INT_SIZE, 'big', signed=False))
-
-
 
 
 client = Client()
