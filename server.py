@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import socket
 import threading
 
@@ -42,10 +40,7 @@ class Server:
     def broadcast(self, sock, data, echo_mode):
         for client in self.connections:
             if client != self.server and (client != sock or echo_mode):
-                try:
-                    client.send(data)
-                except Exception as e:
-                    print(f'Cannot send data to {client.target_ip}, exception:', e)
+                client.send(data)
 
     def handle_client(self, client, username, echo_mode):
         while True:
@@ -57,6 +52,7 @@ class Server:
                 client.close()
                 print(f'{username} disconnected')
                 self.connections.remove(client)
+                break
 
 
 server = Server()

@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 import socket
 import threading
 import pyaudio
@@ -96,5 +94,6 @@ class Client:
                     self.s.sendall(data)
                 except Exception as e:
                     print(e)
+
 
 client = Client()
