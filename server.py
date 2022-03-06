@@ -15,9 +15,9 @@ class Room:
 class Server:
     def __init__(self):
         self.ip = '0.0.0.0'
+        self.port = 8080
         while True:
             try:
-                self.port = int(input('Enter port number to run on --> '))
                 self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.server.bind((self.ip, self.port))
                 break
