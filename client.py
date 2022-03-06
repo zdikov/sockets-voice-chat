@@ -18,6 +18,18 @@ class Client:
         self.username = input('Enter username --> ')
 
         while True:
+            room_id_str = input('Enter room id --> ')
+            try:
+                self.room_id = int(room_id_str)
+                if not 0 < self.room_id < 2 ** 32:
+                    print('Room id must be 4-bit integer')
+                    continue
+            except:
+                print('Room id must be 4-bit integer')
+                continue
+            break
+
+        while True:
             enable_echo_ch = input('Enable echo? [y/n] --> ')
             if enable_echo_ch == 'y':
                 enable_echo = True
@@ -37,6 +49,9 @@ class Client:
         username_bytes = self.username.encode()
         self.s.send(len(username_bytes).to_bytes(constants.INT_SIZE, 'big', signed=False))
         self.s.send(username_bytes)
+
+        self.s.send(self.room_id.to_bytes(constants.INT_SIZE, 'big', signed=False))
+
         length = int.from_bytes(self.s.recv(constants.INT_SIZE), 'big', signed=False)
         participants = json.loads(self.s.recv(length).decode())
 
